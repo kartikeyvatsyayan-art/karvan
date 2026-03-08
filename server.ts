@@ -233,6 +233,10 @@ async function startServer() {
         const overtime = db.prepare('SELECT SUM(hours * rate) as total FROM overtime WHERE employee_id = ? AND date LIKE ?').get(emp.id, `${datePrefix}-%`) as any;
         const totalOvertime = overtime.total || 0;
 
+        // Payments
+        const payments = db.prepare('SELECT SUM(amount) as total FROM payments WHERE employee_id = ? AND date LIKE ?').get(emp.id, `${datePrefix}-%`) as any;
+        const totalPaidAmount = payments.total || 0;
+
         const perDaySalary = emp.monthly_salary / daysInMonth;
         const baseSalary = totalPaidDays * perDaySalary;
         const finalSalary = baseSalary - totalAdvances + totalOvertime;
@@ -246,6 +250,7 @@ async function startServer() {
           baseSalary: Math.round(baseSalary),
           totalAdvances: Math.round(totalAdvances),
           totalOvertime: Math.round(totalOvertime),
+          totalPaidAmount: Math.round(totalPaidAmount),
           finalSalary: Math.round(finalSalary)
         };
       });
@@ -394,6 +399,86 @@ async function startServer() {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', 'attachment; filename=veewell_backup.json');
       res.send(JSON.stringify(backupData, null, 2));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Restore JSON
+  app.post('/api/restore', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    try {
+      const jsonStr = req.file.buffer.toString('utf-8');
+      const parsed = JSON.parse(jsonStr);
+      const data = parsed.data || parsed; // Handle both wrapped and unwrapped formats
+      
+      const transaction = db.transaction(() => {
+        if (data.employees && Array.isArray(data.employees)) {
+          const stmt = db.prepare(`
+            INSERT INTO employees (id, full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              full_name=excluded.full_name, mobile=excluded.mobile, address=excluded.address,
+              pan_id=excluded.pan_id, aadhaar_id=excluded.aadhaar_id, photo_url=excluded.photo_url,
+              monthly_salary=excluded.monthly_salary
+          `);
+          for (const emp of data.employees) {
+            stmt.run(emp.id, emp.full_name, emp.mobile, emp.address, emp.pan_id, emp.aadhaar_id, emp.photo_url, emp.monthly_salary);
+          }
+        }
+
+        if (data.attendance && Array.isArray(data.attendance)) {
+          const stmt = db.prepare(`
+            INSERT INTO attendance (id, employee_id, date, status)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              employee_id=excluded.employee_id, date=excluded.date, status=excluded.status
+          `);
+          for (const att of data.attendance) {
+            stmt.run(att.id, att.employee_id, att.date, att.status);
+          }
+        }
+
+        if (data.advances && Array.isArray(data.advances)) {
+          const stmt = db.prepare(`
+            INSERT INTO advances (id, employee_id, date, amount)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              employee_id=excluded.employee_id, date=excluded.date, amount=excluded.amount
+          `);
+          for (const adv of data.advances) {
+            stmt.run(adv.id, adv.employee_id, adv.date, adv.amount);
+          }
+        }
+
+        if (data.overtime && Array.isArray(data.overtime)) {
+          const stmt = db.prepare(`
+            INSERT INTO overtime (id, employee_id, date, hours, rate)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              employee_id=excluded.employee_id, date=excluded.date, hours=excluded.hours, rate=excluded.rate
+          `);
+          for (const ot of data.overtime) {
+            stmt.run(ot.id, ot.employee_id, ot.date, ot.hours, ot.rate);
+          }
+        }
+
+        if (data.payments && Array.isArray(data.payments)) {
+          const stmt = db.prepare(`
+            INSERT INTO payments (id, employee_id, date, amount, mode)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+              employee_id=excluded.employee_id, date=excluded.date, amount=excluded.amount, mode=excluded.mode
+          `);
+          for (const pay of data.payments) {
+            stmt.run(pay.id, pay.employee_id, pay.date, pay.amount, pay.mode);
+          }
+        }
+      });
+      
+      transaction();
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

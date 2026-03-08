@@ -29,10 +29,42 @@ export default function Layout() {
   const location = useLocation();
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const handleBackup = async () => {
     window.location.href = '/api/backup';
+  };
+
+  const handleJsonRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsRestoring(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/restore', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        alert('JSON Data restored successfully!');
+        window.location.reload(); // Reload to reflect new data
+      } else {
+        const data = await res.json();
+        alert(`Error restoring data: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Restore error:', error);
+      alert('Failed to restore data. Please check the file format.');
+    } finally {
+      setIsRestoring(false);
+      if (jsonInputRef.current) jsonInputRef.current.value = '';
+    }
   };
 
   const handleExportSheets = () => {
@@ -113,13 +145,36 @@ export default function Layout() {
             <FileSpreadsheet size={16} />
             Google Sheets Sync
           </button>
-          <button 
-            onClick={handleBackup}
-            className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl transition-colors text-sm font-medium"
-          >
-            <Download size={16} />
-            Backup JSON
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              onClick={handleBackup}
+              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl transition-colors text-sm font-medium"
+            >
+              <Download size={16} />
+              Backup
+            </button>
+            <button 
+              onClick={() => jsonInputRef.current?.click()}
+              disabled={isRestoring}
+              className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-3 rounded-xl transition-colors text-sm font-medium disabled:opacity-50"
+            >
+              {isRestoring ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-300"></div>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  Restore
+                </>
+              )}
+            </button>
+          </div>
+          <input 
+            type="file" 
+            accept=".json" 
+            className="hidden" 
+            ref={jsonInputRef}
+            onChange={handleJsonRestore}
+          />
         </div>
       </aside>
 
