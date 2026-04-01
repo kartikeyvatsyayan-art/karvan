@@ -100,7 +100,7 @@ export default function Employees() {
         </div>
         <button
           onClick={() => openModal()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2 premium-glossy"
         >
           <Plus size={20} /> Add Employee
         </button>
@@ -180,13 +180,13 @@ export default function Employees() {
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => openModal(emp)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors premium-glossy"
                         >
                           <Edit size={18} />
                         </button>
                         <button
                           onClick={() => handleDelete(emp.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors premium-glossy"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -212,7 +212,7 @@ export default function Employees() {
               <h2 className="text-xl font-bold text-slate-900">
                 {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 premium-glossy p-1 rounded-full">
                 &times;
               </button>
             </div>
@@ -293,13 +293,13 @@ export default function Employees() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-6 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors premium-glossy"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-blue-500/30 transition-all premium-glossy"
                 >
                   {editingEmployee ? 'Save Changes' : 'Add Employee'}
                 </button>

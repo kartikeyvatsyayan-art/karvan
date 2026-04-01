@@ -66,7 +66,7 @@ export default function Advances() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-amber-500/30 transition-all flex items-center gap-2"
+          className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-amber-500/30 transition-all flex items-center gap-2 premium-glossy"
         >
           <Plus size={20} /> Issue Advance
         </button>
@@ -117,7 +117,7 @@ export default function Advances() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => handleDelete(adv.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 premium-glossy"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -140,7 +140,7 @@ export default function Advances() {
           >
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h2 className="text-xl font-bold text-slate-900">Issue Advance</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 premium-glossy p-1 rounded-full">
                 &times;
               </button>
             </div>
@@ -188,13 +188,13 @@ export default function Advances() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-6 py-2.5 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors premium-glossy"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-amber-500/30 transition-all"
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-amber-500/30 transition-all premium-glossy"
                 >
                   Save Advance
                 </button>

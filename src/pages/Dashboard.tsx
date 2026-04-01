@@ -59,7 +59,9 @@ export default function Dashboard() {
     // Company Header
     doc.setFontSize(22);
     doc.setTextColor(15, 23, 42); // slate-900
-    doc.text('Veewell Enterprise', 105, 20, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.text('Veewell', 105, 20, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
     
     doc.setFontSize(16);
     doc.setTextColor(71, 85, 105); // slate-500
@@ -238,8 +240,8 @@ export default function Dashboard() {
       </div>
 
       {/* Placeholder for charts or recent activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
+      <div className="mt-8">
+        <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
               <Calculator size={20} className="text-blue-500" /> Monthly Salary Calculation
@@ -337,7 +339,7 @@ export default function Dashboard() {
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => generateSalarySlipPDF(row)}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-flex items-center justify-center premium-glossy"
                           title="Download Salary Slip PDF"
                         >
                           <FileDown size={18} />
@@ -348,20 +350,6 @@ export default function Dashboard() {
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h3>
-          <div className="space-y-3">
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors flex items-center gap-3">
-              <Users size={18} className="text-blue-500" /> Add New Employee
-            </button>
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors flex items-center gap-3">
-              <CreditCard size={18} className="text-emerald-500" /> Record Payment
-            </button>
-            <button className="w-full text-left px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors flex items-center gap-3">
-              <Wallet size={18} className="text-amber-500" /> Issue Advance
-            </button>
           </div>
         </div>
       </div>

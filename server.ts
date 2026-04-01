@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
+import path from 'path';
+import fs from 'fs';
 import db from './src/db/database.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -90,14 +92,18 @@ async function startServer() {
   });
 
   app.post('/api/attendance', (req, res) => {
-    const { employee_id, date, status } = req.body;
+    const { employee_id, date, status, login_time, logout_time, comment } = req.body;
     try {
       const stmt = db.prepare(`
-        INSERT INTO attendance (employee_id, date, status)
-        VALUES (?, ?, ?)
-        ON CONFLICT(employee_id, date) DO UPDATE SET status = excluded.status
+        INSERT INTO attendance (employee_id, date, status, login_time, logout_time, comment)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(employee_id, date) DO UPDATE SET 
+          status = excluded.status,
+          login_time = excluded.login_time,
+          logout_time = excluded.logout_time,
+          comment = excluded.comment
       `);
-      stmt.run(employee_id, date, status);
+      stmt.run(employee_id, date, status, login_time, logout_time, comment);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -316,13 +322,14 @@ async function startServer() {
         if (wb.SheetNames.includes('Attendance')) {
           const attendance = XLSX.utils.sheet_to_json(wb.Sheets['Attendance']) as any[];
           const stmt = db.prepare(`
-            INSERT INTO attendance (id, employee_id, date, status)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO attendance (id, employee_id, date, status, login_time, logout_time, comment)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-              employee_id=excluded.employee_id, date=excluded.date, status=excluded.status
+              employee_id=excluded.employee_id, date=excluded.date, status=excluded.status,
+              login_time=excluded.login_time, logout_time=excluded.logout_time, comment=excluded.comment
           `);
           for (const att of attendance) {
-            stmt.run(att.id, att.employee_id, att.date, att.status);
+            stmt.run(att.id, att.employee_id, att.date, att.status, att.login_time, att.logout_time, att.comment);
           }
         }
 
@@ -430,13 +437,14 @@ async function startServer() {
 
         if (data.attendance && Array.isArray(data.attendance)) {
           const stmt = db.prepare(`
-            INSERT INTO attendance (id, employee_id, date, status)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO attendance (id, employee_id, date, status, login_time, logout_time, comment)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-              employee_id=excluded.employee_id, date=excluded.date, status=excluded.status
+              employee_id=excluded.employee_id, date=excluded.date, status=excluded.status,
+              login_time=excluded.login_time, logout_time=excluded.logout_time, comment=excluded.comment
           `);
           for (const att of data.attendance) {
-            stmt.run(att.id, att.employee_id, att.date, att.status);
+            stmt.run(att.id, att.employee_id, att.date, att.status, att.login_time, att.logout_time, att.comment);
           }
         }
 
@@ -479,6 +487,42 @@ async function startServer() {
       
       transaction();
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Full Database Backup (.db file)
+  app.get('/api/db-backup', (req, res) => {
+    const dbPath = path.resolve(process.cwd(), 'veewell.db');
+    if (fs.existsSync(dbPath)) {
+      res.download(dbPath, 'veewell_full_backup.db');
+    } else {
+      res.status(404).json({ error: 'Database file not found' });
+    }
+  });
+
+  // Full Database Restore (.db file)
+  app.post('/api/db-restore', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const dbPath = path.resolve(process.cwd(), 'veewell.db');
+    try {
+      // Close the current connection
+      db.close();
+      
+      // Write the new database file
+      fs.writeFileSync(dbPath, req.file.buffer);
+      
+      // The server will likely need a restart or we need to re-initialize the db import
+      // In this environment, we can just respond and the user can reload.
+      // But we need to re-open the connection for subsequent requests if the process stays alive.
+      // However, 'db' is imported as a singleton. We might need to handle this carefully.
+      
+      res.json({ success: true, message: 'Database file replaced. Please refresh the page.' });
+      
+      // Force exit to let the platform restart the server with the new DB
+      setTimeout(() => process.exit(0), 1000);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

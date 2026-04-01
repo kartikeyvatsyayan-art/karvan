@@ -15,6 +15,9 @@ export interface Attendance {
   employee_id: number;
   date: string;
   status: 'P' | 'L' | 'H' | 'A' | 'S';
+  login_time?: string;
+  logout_time?: string;
+  comment?: string;
 }
 
 export interface Advance {

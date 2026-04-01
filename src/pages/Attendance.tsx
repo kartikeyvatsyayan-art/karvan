@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { format, getDaysInMonth, startOfMonth, addDays } from 'date-fns';
-import { CheckCircle2, XCircle, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Calendar, AlertCircle, Edit3, X, Save } from 'lucide-react';
 import type { Employee, Attendance as AttendanceType } from '../types';
 
 const STATUS_COLORS = {
@@ -27,6 +27,16 @@ export default function Attendance() {
   
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const [editingRecord, setEditingRecord] = useState<{
+    employeeId: number;
+    employeeName: string;
+    date: string;
+    status: string;
+    loginTime: string;
+    logoutTime: string;
+    comment: string;
+  } | null>(null);
 
   const fetchEmployees = async () => {
     const res = await fetch('/api/employees');
@@ -62,6 +72,52 @@ export default function Attendance() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ employee_id: employeeId, date, status }),
     });
+  };
+
+  const handleUpdateDetails = async () => {
+    if (!editingRecord) return;
+
+    const { employeeId, date, status, loginTime, logoutTime, comment } = editingRecord;
+
+    // Optimistic update
+    const newAttendance = [...attendance];
+    const existingIndex = newAttendance.findIndex(a => a.employee_id === employeeId && a.date === date);
+    
+    if (existingIndex >= 0) {
+      newAttendance[existingIndex] = { 
+        ...newAttendance[existingIndex], 
+        status: status as any,
+        login_time: loginTime,
+        logout_time: logoutTime,
+        comment: comment
+      };
+    } else {
+      newAttendance.push({ 
+        id: Date.now(), 
+        employee_id: employeeId, 
+        date, 
+        status: status as any,
+        login_time: loginTime,
+        logout_time: logoutTime,
+        comment: comment
+      });
+    }
+    setAttendance(newAttendance);
+
+    await fetch('/api/attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        employee_id: employeeId, 
+        date, 
+        status,
+        login_time: loginTime,
+        logout_time: logoutTime,
+        comment: comment
+      }),
+    });
+
+    setEditingRecord(null);
   };
 
   const daysInMonth = useMemo(() => {
@@ -184,21 +240,41 @@ export default function Attendance() {
                         const status = record?.status;
                         
                         return (
-                          <td key={day.date} className={`p-1 text-center ${day.isSunday ? 'bg-red-50/30' : ''}`}>
-                            <select
-                              value={status || ''}
-                              onChange={(e) => handleStatusChange(emp.id, day.date, e.target.value)}
-                              className={`w-full h-10 rounded-lg text-center font-bold text-sm cursor-pointer appearance-none transition-all border ${
-                                status ? STATUS_COLORS[status] : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
-                              }`}
-                            >
-                              <option value="" disabled>-</option>
-                              <option value="P">P</option>
-                              <option value="L">L</option>
-                              <option value="H">H</option>
-                              <option value="A">A</option>
-                              <option value="S">S</option>
-                            </select>
+                          <td key={day.date} className={`p-1 text-center relative group/cell ${day.isSunday ? 'bg-red-50/30' : ''}`}>
+                            <div className="flex flex-col gap-1 items-center">
+                              <select
+                                value={status || ''}
+                                onChange={(e) => handleStatusChange(emp.id, day.date, e.target.value)}
+                                className={`w-full h-10 rounded-lg text-center font-bold text-sm cursor-pointer appearance-none transition-all border ${
+                                  status ? STATUS_COLORS[status] : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
+                                }`}
+                              >
+                                <option value="" disabled>-</option>
+                                <option value="P">P</option>
+                                <option value="L">L</option>
+                                <option value="H">H</option>
+                                <option value="A">A</option>
+                                <option value="S">S</option>
+                              </select>
+                              
+                              <button
+                                onClick={() => setEditingRecord({
+                                  employeeId: emp.id,
+                                  employeeName: emp.full_name,
+                                  date: day.date,
+                                  status: status || 'P',
+                                  loginTime: record?.login_time || '',
+                                  logoutTime: record?.logout_time || '',
+                                  comment: record?.comment || '',
+                                })}
+                                className={`p-1 rounded-md transition-all opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-500 premium-glossy ${
+                                  (record?.login_time || record?.logout_time || record?.comment) ? 'opacity-100 text-blue-600' : ''
+                                }`}
+                                title="Edit Details"
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                            </div>
                           </td>
                         );
                       })}
@@ -228,6 +304,105 @@ export default function Attendance() {
           </div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {editingRecord && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Attendance Details</h2>
+                  <p className="text-sm text-slate-500">{editingRecord.employeeName} • {format(new Date(editingRecord.date), 'dd MMM yyyy')}</p>
+                </div>
+                <button 
+                  onClick={() => setEditingRecord(null)}
+                  className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600 premium-glossy"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                    <select
+                      value={editingRecord.status}
+                      onChange={(e) => setEditingRecord({ ...editingRecord, status: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                    >
+                      <option value="P">Present</option>
+                      <option value="L">Leave</option>
+                      <option value="H">Half Day</option>
+                      <option value="A">Absent</option>
+                      <option value="S">Sunday</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Login Time</label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="time"
+                        value={editingRecord.loginTime}
+                        onChange={(e) => setEditingRecord({ ...editingRecord, loginTime: e.target.value })}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Logout Time</label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="time"
+                        value={editingRecord.logoutTime}
+                        onChange={(e) => setEditingRecord({ ...editingRecord, logoutTime: e.target.value })}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Comment</label>
+                  <textarea
+                    value={editingRecord.comment}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, comment: e.target.value })}
+                    placeholder="Add a note..."
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
+                <button
+                  onClick={() => setEditingRecord(null)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-white transition-all premium-glossy"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateDetails}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 premium-glossy"
+                >
+                  <Save size={18} />
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

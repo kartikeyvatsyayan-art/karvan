@@ -23,6 +23,9 @@ db.exec(`
     employee_id INTEGER NOT NULL,
     date TEXT NOT NULL,
     status TEXT NOT NULL,
+    login_time TEXT,
+    logout_time TEXT,
+    comment TEXT,
     FOREIGN KEY (employee_id) REFERENCES employees(id),
     UNIQUE(employee_id, date)
   );
