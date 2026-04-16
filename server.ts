@@ -504,27 +504,59 @@ async function startServer() {
 
   // Full Database Restore (.db file)
   app.post('/api/db-restore', upload.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file) {
+      console.error('Restore failed: No file uploaded');
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
     
+    console.log('Starting full database restore...');
     const dbPath = path.resolve(process.cwd(), 'veewell.db');
+    const backupPath = path.resolve(process.cwd(), 'veewell.db.bak');
+    
     try {
-      // Close the current connection
+      // 1. Close the current connection to release the file lock
+      console.log('Closing database connection...');
       db.close();
       
-      // Write the new database file
+      // 2. Backup current DB just in case
+      if (fs.existsSync(dbPath)) {
+        fs.renameSync(dbPath, backupPath);
+        console.log('Current database moved to backup');
+      }
+      
+      // 3. Write the new database file
       fs.writeFileSync(dbPath, req.file.buffer);
+      console.log('New database file written successfully');
       
-      // The server will likely need a restart or we need to re-initialize the db import
-      // In this environment, we can just respond and the user can reload.
-      // But we need to re-open the connection for subsequent requests if the process stays alive.
-      // However, 'db' is imported as a singleton. We might need to handle this carefully.
+      // 4. Delete the backup if everything went well
+      if (fs.existsSync(backupPath)) {
+        fs.unlinkSync(backupPath);
+      }
       
-      res.json({ success: true, message: 'Database file replaced. Please refresh the page.' });
+      res.json({ success: true, message: 'Database file replaced. The server will now restart.' });
       
-      // Force exit to let the platform restart the server with the new DB
-      setTimeout(() => process.exit(0), 1000);
+      // 5. Force exit to let the platform restart the server with the new DB
+      console.log('Exiting process for restart in 1 second...');
+      setTimeout(() => {
+        process.exit(0);
+      }, 1000);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Database restore error:', error);
+      
+      // Try to restore the backup if it exists and we failed
+      if (fs.existsSync(backupPath) && !fs.existsSync(dbPath)) {
+        try {
+          fs.renameSync(backupPath, dbPath);
+          console.log('Restored original database from backup after failure');
+        } catch (e) {
+          console.error('Failed to restore backup after error:', e);
+        }
+      }
+      
+      res.status(500).json({ error: `Restore failed: ${error.message}` });
+      
+      // If we closed the DB but failed to restore, we might need to exit anyway to recover
+      setTimeout(() => process.exit(1), 2000);
     }
   });
 

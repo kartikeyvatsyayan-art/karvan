@@ -66,8 +66,11 @@ export default function Layout() {
       });
 
       if (res.ok) {
-        alert('Full database restored successfully! The server will restart. Please refresh the page in a few seconds.');
-        window.location.reload();
+        alert('Full database restored successfully! The server is restarting. Please wait a few seconds before the page reloads.');
+        // Wait 3 seconds before reloading to give the server time to restart
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
       } else {
         const data = await res.json();
         alert(`Error restoring database: ${data.error}`);
