@@ -43,13 +43,13 @@ async function startServer() {
   });
 
   app.post('/api/employees', (req, res) => {
-    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary } = req.body;
+    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining } = req.body;
     try {
       const stmt = db.prepare(`
-        INSERT INTO employees (full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO employees (full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary);
+      const info = stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining);
       res.json({ id: info.lastInsertRowid });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -57,14 +57,14 @@ async function startServer() {
   });
 
   app.put('/api/employees/:id', (req, res) => {
-    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary } = req.body;
+    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining } = req.body;
     try {
       const stmt = db.prepare(`
         UPDATE employees 
-        SET full_name = ?, mobile = ?, address = ?, pan_id = ?, aadhaar_id = ?, photo_url = ?, monthly_salary = ?
+        SET full_name = ?, mobile = ?, address = ?, pan_id = ?, aadhaar_id = ?, photo_url = ?, monthly_salary = ?, date_of_joining = ?
         WHERE id = ?
       `);
-      stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, req.params.id);
+      stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining, req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -250,6 +250,7 @@ async function startServer() {
         return {
           employee_id: emp.id,
           full_name: emp.full_name,
+          date_of_joining: emp.date_of_joining,
           monthly_salary: emp.monthly_salary,
           perDaySalary: Math.round(perDaySalary),
           totalPaidDays,
@@ -306,15 +307,15 @@ async function startServer() {
         if (wb.SheetNames.includes('Employees')) {
           const employees = XLSX.utils.sheet_to_json(wb.Sheets['Employees']) as any[];
           const stmt = db.prepare(`
-            INSERT INTO employees (id, full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO employees (id, full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               full_name=excluded.full_name, mobile=excluded.mobile, address=excluded.address,
               pan_id=excluded.pan_id, aadhaar_id=excluded.aadhaar_id, photo_url=excluded.photo_url,
-              monthly_salary=excluded.monthly_salary
+              monthly_salary=excluded.monthly_salary, date_of_joining=excluded.date_of_joining
           `);
           for (const emp of employees) {
-            stmt.run(emp.id, emp.full_name, emp.mobile, emp.address, emp.pan_id, emp.aadhaar_id, emp.photo_url, emp.monthly_salary);
+            stmt.run(emp.id, emp.full_name, emp.mobile, emp.address, emp.pan_id, emp.aadhaar_id, emp.photo_url, emp.monthly_salary, emp.date_of_joining || '2024-01-01');
           }
         }
 
@@ -423,15 +424,15 @@ async function startServer() {
       const transaction = db.transaction(() => {
         if (data.employees && Array.isArray(data.employees)) {
           const stmt = db.prepare(`
-            INSERT INTO employees (id, full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO employees (id, full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               full_name=excluded.full_name, mobile=excluded.mobile, address=excluded.address,
               pan_id=excluded.pan_id, aadhaar_id=excluded.aadhaar_id, photo_url=excluded.photo_url,
-              monthly_salary=excluded.monthly_salary
+              monthly_salary=excluded.monthly_salary, date_of_joining=excluded.date_of_joining
           `);
           for (const emp of data.employees) {
-            stmt.run(emp.id, emp.full_name, emp.mobile, emp.address, emp.pan_id, emp.aadhaar_id, emp.photo_url, emp.monthly_salary);
+            stmt.run(emp.id, emp.full_name, emp.mobile, emp.address, emp.pan_id, emp.aadhaar_id, emp.photo_url, emp.monthly_salary, emp.date_of_joining || '2024-01-01');
           }
         }
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Plus, Edit, Trash2, Search, User, IndianRupee } from 'lucide-react';
+import { format } from 'date-fns';
 import type { Employee } from '../types';
 
 export default function Employees() {
@@ -18,6 +19,7 @@ export default function Employees() {
     aadhaar_id: '',
     photo_url: '',
     monthly_salary: 0,
+    date_of_joining: new Date().toISOString().split('T')[0],
   });
 
   const fetchEmployees = async () => {
@@ -65,6 +67,7 @@ export default function Employees() {
         aadhaar_id: emp.aadhaar_id,
         photo_url: emp.photo_url,
         monthly_salary: emp.monthly_salary,
+        date_of_joining: emp.date_of_joining || new Date().toISOString().split('T')[0],
       });
     } else {
       setEditingEmployee(null);
@@ -76,6 +79,7 @@ export default function Employees() {
         aadhaar_id: '',
         photo_url: '',
         monthly_salary: 0,
+        date_of_joining: new Date().toISOString().split('T')[0],
       });
     }
     setIsModalOpen(true);
@@ -175,6 +179,9 @@ export default function Employees() {
                         <IndianRupee size={14} /> {emp.monthly_salary.toLocaleString()}
                       </div>
                       <div className="text-xs text-slate-500">/ month</div>
+                      {emp.date_of_joining && (
+                        <div className="text-xs text-slate-500 mt-1">Joined: {format(new Date(emp.date_of_joining), 'MMM dd, yyyy')}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -285,6 +292,16 @@ export default function Employees() {
                     onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
                     className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
                     placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Date of Joining *</label>
+                  <input
+                    required
+                    type="date"
+                    value={formData.date_of_joining}
+                    onChange={(e) => setFormData({ ...formData, date_of_joining: e.target.value })}
+                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
                   />
                 </div>
               </div>

@@ -7,6 +7,7 @@ export interface Employee {
   aadhaar_id: string;
   photo_url: string;
   monthly_salary: number;
+  date_of_joining: string;
   created_at: string;
 }
 

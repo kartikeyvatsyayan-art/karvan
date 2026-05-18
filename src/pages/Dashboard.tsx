@@ -14,6 +14,7 @@ interface DashboardStats {
 interface SalaryCalculation {
   employee_id: number;
   full_name: string;
+  date_of_joining: string;
   monthly_salary: number;
   perDaySalary: number;
   totalPaidDays: number;
@@ -86,6 +87,10 @@ export default function Dashboard() {
     doc.text(`Month of Salary: ${monthName} ${selectedYear}`, 20, 80);
     doc.text(`Paid Days: ${emp.totalPaidDays}`, 120, 80);
     doc.text(`Monthly Salary: Rs. ${emp.monthly_salary.toLocaleString()}`, 20, 90);
+    
+    if (emp.date_of_joining) {
+      doc.text(`Date of Joining: ${format(new Date(emp.date_of_joining), 'MMM dd, yyyy')}`, 120, 90);
+    }
     
     // Divider
     doc.line(20, 100, 190, 100);

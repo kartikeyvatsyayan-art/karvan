@@ -15,6 +15,7 @@ db.exec(`
     aadhaar_id TEXT,
     photo_url TEXT,
     monthly_salary REAL NOT NULL,
+    date_of_joining TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -56,5 +57,13 @@ db.exec(`
     FOREIGN KEY (employee_id) REFERENCES employees(id)
   );
 `);
+
+// Migration for existing tables
+try {
+  const currentYearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+  db.exec(`ALTER TABLE employees ADD COLUMN date_of_joining TEXT DEFAULT '${currentYearStart}'`);
+} catch (error) {
+  // Column already exists, ignore
+}
 
 export default db;

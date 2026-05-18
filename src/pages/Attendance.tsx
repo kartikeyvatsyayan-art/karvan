@@ -238,43 +238,50 @@ export default function Attendance() {
                       {daysInMonth.map((day) => {
                         const record = attendance.find(a => a.employee_id === emp.id && a.date === day.date);
                         const status = record?.status;
+                        const isBeforeJoining = day.date < (emp.date_of_joining || '2000-01-01');
                         
                         return (
-                          <td key={day.date} className={`p-1 text-center relative group/cell ${day.isSunday ? 'bg-red-50/30' : ''}`}>
-                            <div className="flex flex-col gap-1 items-center">
-                              <select
-                                value={status || ''}
-                                onChange={(e) => handleStatusChange(emp.id, day.date, e.target.value)}
-                                className={`w-full h-10 rounded-lg text-center font-bold text-sm cursor-pointer appearance-none transition-all border ${
-                                  status ? STATUS_COLORS[status] : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
-                                }`}
-                              >
-                                <option value="" disabled>-</option>
-                                <option value="P">P</option>
-                                <option value="L">L</option>
-                                <option value="H">H</option>
-                                <option value="A">A</option>
-                                <option value="S">S</option>
-                              </select>
-                              
-                              <button
-                                onClick={() => setEditingRecord({
-                                  employeeId: emp.id,
-                                  employeeName: emp.full_name,
-                                  date: day.date,
-                                  status: status || 'P',
-                                  loginTime: record?.login_time || '',
-                                  logoutTime: record?.logout_time || '',
-                                  comment: record?.comment || '',
-                                })}
-                                className={`p-1 rounded-md transition-all opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-500 premium-glossy ${
-                                  (record?.login_time || record?.logout_time || record?.comment) ? 'opacity-100 text-blue-600' : ''
-                                }`}
-                                title="Edit Details"
-                              >
-                                <Edit3 size={12} />
-                              </button>
-                            </div>
+                          <td key={day.date} className={`p-1 text-center relative group/cell ${day.isSunday ? 'bg-red-50/30' : ''} ${isBeforeJoining ? 'bg-slate-100/50' : ''}`}>
+                            {isBeforeJoining ? (
+                              <div className="w-full h-10 flex items-center justify-center text-slate-300 pointer-events-none" title="Not joined yet">
+                                -
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1 items-center">
+                                <select
+                                  value={status || ''}
+                                  onChange={(e) => handleStatusChange(emp.id, day.date, e.target.value)}
+                                  className={`w-full h-10 rounded-lg text-center font-bold text-sm cursor-pointer appearance-none transition-all border ${
+                                    status ? STATUS_COLORS[status] : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  <option value="" disabled>-</option>
+                                  <option value="P">P</option>
+                                  <option value="L">L</option>
+                                  <option value="H">H</option>
+                                  <option value="A">A</option>
+                                  <option value="S">S</option>
+                                </select>
+                                
+                                <button
+                                  onClick={() => setEditingRecord({
+                                    employeeId: emp.id,
+                                    employeeName: emp.full_name,
+                                    date: day.date,
+                                    status: status || 'P',
+                                    loginTime: record?.login_time || '',
+                                    logoutTime: record?.logout_time || '',
+                                    comment: record?.comment || '',
+                                  })}
+                                  className={`p-1 rounded-md transition-all opacity-0 group-hover/cell:opacity-100 hover:bg-slate-200 text-slate-500 premium-glossy ${
+                                    (record?.login_time || record?.logout_time || record?.comment) ? 'opacity-100 text-blue-600' : ''
+                                  }`}
+                                  title="Edit Details"
+                                >
+                                  <Edit3 size={12} />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         );
                       })}
