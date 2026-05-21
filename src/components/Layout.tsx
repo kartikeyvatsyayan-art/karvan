@@ -156,7 +156,7 @@ export default function Layout() {
         initial={false}
         animate={{ width: isSidebarCollapsed ? 80 : 260 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="bg-slate-900 text-white flex flex-col shadow-xl z-20 relative"
+        className="bg-slate-900 text-white flex flex-col shadow-xl z-20 relative print:hidden"
       >
         <div className="p-6 flex items-center justify-between overflow-hidden">
           <AnimatePresence mode="wait">
@@ -282,7 +282,7 @@ export default function Layout() {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative">
+      <main className="flex-1 overflow-y-auto relative print:p-0 print:bg-white">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-slate-50/50 pointer-events-none" />
         <div className="relative p-8 max-w-7xl mx-auto">
           <Outlet />
