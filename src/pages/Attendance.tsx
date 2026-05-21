@@ -247,7 +247,10 @@ export default function Attendance() {
                                 -
                               </div>
                             ) : (
-                              <div className="flex flex-col gap-1 items-center">
+                              <div 
+                                className="flex flex-col gap-1 items-center"
+                                title={record?.comment ? `Comment: ${record.comment}` : undefined}
+                              >
                                 <select
                                   value={status || ''}
                                   onChange={(e) => handleStatusChange(emp.id, day.date, e.target.value)}

@@ -73,7 +73,15 @@ async function startServer() {
 
   app.delete('/api/employees/:id', (req, res) => {
     try {
-      db.prepare('DELETE FROM employees WHERE id = ?').run(req.params.id);
+      const id = req.params.id;
+      const transaction = db.transaction(() => {
+        db.prepare('DELETE FROM attendance WHERE employee_id = ?').run(id);
+        db.prepare('DELETE FROM advances WHERE employee_id = ?').run(id);
+        db.prepare('DELETE FROM overtime WHERE employee_id = ?').run(id);
+        db.prepare('DELETE FROM payments WHERE employee_id = ?').run(id);
+        db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+      });
+      transaction();
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -205,22 +213,33 @@ async function startServer() {
 
   // Salary Calculation
   app.get('/api/salary-calculation', (req, res) => {
-    const { month, year } = req.query;
-    if (!month || !year) {
-      return res.status(400).json({ error: 'Month and year required' });
-    }
+    const { month, year, startDate, endDate } = req.query;
     
-    const m = parseInt(month as string, 10);
-    const y = parseInt(year as string, 10);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const datePrefix = `${y}-${m.toString().padStart(2, '0')}`;
+    let startStr = '';
+    let endStr = '';
+    let daysInMonth = 30;
+
+    if (startDate && endDate) {
+      startStr = startDate as string;
+      endStr = endDate as string;
+      const sDate = new Date(startStr);
+      daysInMonth = new Date(sDate.getFullYear(), sDate.getMonth() + 1, 0).getDate();
+    } else if (month && year) {
+      const m = parseInt(month as string, 10);
+      const y = parseInt(year as string, 10);
+      daysInMonth = new Date(y, m, 0).getDate();
+      startStr = `${y}-${m.toString().padStart(2, '0')}-01`;
+      endStr = `${y}-${m.toString().padStart(2, '0')}-${daysInMonth.toString().padStart(2, '0')}`;
+    } else {
+      return res.status(400).json({ error: 'Month/Year or Start/End dates required' });
+    }
 
     try {
       const employees = db.prepare('SELECT * FROM employees').all() as any[];
       
       const results = employees.map(emp => {
         // Attendance
-        const attendance = db.prepare('SELECT status FROM attendance WHERE employee_id = ? AND date LIKE ?').all(emp.id, `${datePrefix}-%`) as any[];
+        const attendance = db.prepare('SELECT status FROM attendance WHERE employee_id = ? AND date >= ? AND date <= ?').all(emp.id, startStr, endStr) as any[];
         let p = 0, l = 0, h = 0, a = 0, s = 0;
         attendance.forEach(record => {
           if (record.status === 'P') p++;
@@ -232,15 +251,15 @@ async function startServer() {
         const totalPaidDays = p + l + s + (h * 0.5);
         
         // Advances
-        const advances = db.prepare('SELECT SUM(amount) as total FROM advances WHERE employee_id = ? AND date LIKE ?').get(emp.id, `${datePrefix}-%`) as any;
+        const advances = db.prepare('SELECT SUM(amount) as total FROM advances WHERE employee_id = ? AND date >= ? AND date <= ?').get(emp.id, startStr, endStr) as any;
         const totalAdvances = advances.total || 0;
         
         // Overtime
-        const overtime = db.prepare('SELECT SUM(hours * rate) as total FROM overtime WHERE employee_id = ? AND date LIKE ?').get(emp.id, `${datePrefix}-%`) as any;
+        const overtime = db.prepare('SELECT SUM(hours * rate) as total FROM overtime WHERE employee_id = ? AND date >= ? AND date <= ?').get(emp.id, startStr, endStr) as any;
         const totalOvertime = overtime.total || 0;
 
         // Payments
-        const payments = db.prepare('SELECT SUM(amount) as total FROM payments WHERE employee_id = ? AND date LIKE ?').get(emp.id, `${datePrefix}-%`) as any;
+        const payments = db.prepare('SELECT SUM(amount) as total FROM payments WHERE employee_id = ? AND date >= ? AND date <= ?').get(emp.id, startStr, endStr) as any;
         const totalPaidAmount = payments.total || 0;
 
         const perDaySalary = emp.monthly_salary / daysInMonth;
@@ -258,7 +277,8 @@ async function startServer() {
           totalAdvances: Math.round(totalAdvances),
           totalOvertime: Math.round(totalOvertime),
           totalPaidAmount: Math.round(totalPaidAmount),
-          finalSalary: Math.round(finalSalary)
+          finalSalary: Math.round(finalSalary),
+          periodStr: `${startStr} to ${endStr}`
         };
       });
 

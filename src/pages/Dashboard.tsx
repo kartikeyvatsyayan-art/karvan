@@ -23,14 +23,19 @@ interface SalaryCalculation {
   totalOvertime: number;
   totalPaidAmount: number;
   finalSalary: number;
+  periodStr: string;
 }
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   
+  const [calculationMode, setCalculationMode] = useState<'month' | 'period'>('month');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0), 'yyyy-MM-dd'));
+
   const [salaryData, setSalaryData] = useState<SalaryCalculation[]>([]);
   const [loadingSalary, setLoadingSalary] = useState(false);
 
@@ -45,17 +50,30 @@ export default function Dashboard() {
 
   useEffect(() => {
     setLoadingSalary(true);
-    fetch(`/api/salary-calculation?month=${selectedMonth}&year=${selectedYear}`)
+    let url = `/api/salary-calculation?`;
+    if (calculationMode === 'month') {
+      url += `month=${selectedMonth}&year=${selectedYear}`;
+    } else {
+      url += `startDate=${startDate}&endDate=${endDate}`;
+    }
+    
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         setSalaryData(data);
         setLoadingSalary(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoadingSalary(false);
       });
-  }, [selectedMonth, selectedYear]);
+  }, [calculationMode, selectedMonth, selectedYear, startDate, endDate]);
 
   const generateSalarySlipPDF = (emp: SalaryCalculation) => {
     const doc = new jsPDF();
-    const monthName = format(new Date(selectedYear, selectedMonth - 1), 'MMMM');
+    const periodName = calculationMode === 'month' 
+      ? `${format(new Date(selectedYear, selectedMonth - 1), 'MMMM')} ${selectedYear}`
+      : `${format(new Date(startDate), 'MMM dd')} - ${format(new Date(endDate), 'MMM dd, yyyy')}`;
     
     // Company Header
     doc.setFontSize(22);
@@ -69,7 +87,7 @@ export default function Dashboard() {
     doc.text('Salary Slip', 105, 30, { align: 'center' });
     
     doc.setFontSize(12);
-    doc.text(`For the month of: ${monthName} ${selectedYear}`, 105, 40, { align: 'center' });
+    doc.text(`For the period of: ${periodName}`, 105, 40, { align: 'center' });
 
     // Divider
     doc.setDrawColor(226, 232, 240); // slate-200
@@ -84,7 +102,7 @@ export default function Dashboard() {
     doc.setFont('helvetica', 'normal');
     doc.text(`Name: ${emp.full_name}`, 20, 70);
     doc.text(`Employee ID: #${emp.employee_id.toString().padStart(4, '0')}`, 120, 70);
-    doc.text(`Month of Salary: ${monthName} ${selectedYear}`, 20, 80);
+    doc.text(`Salary Period: ${periodName}`, 20, 80);
     doc.text(`Paid Days: ${emp.totalPaidDays}`, 120, 80);
     doc.text(`Monthly Salary: Rs. ${emp.monthly_salary.toLocaleString()}`, 20, 90);
     
@@ -162,7 +180,7 @@ export default function Dashboard() {
     doc.setTextColor(148, 163, 184); // slate-400
     doc.text('This is a computer-generated document. No signature is required.', 105, 280, { align: 'center' });
     
-    doc.save(`Salary_Slip_${emp.full_name.replace(/\s+/g, '_')}_${monthName}_${selectedYear}.pdf`);
+    doc.save(`Salary_Slip_${emp.full_name.replace(/\s+/g, '_')}_${periodName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
   if (loading) {
@@ -247,32 +265,67 @@ export default function Dashboard() {
       {/* Placeholder for charts or recent activity */}
       <div className="mt-8">
         <div className="bg-white rounded-2xl p-6 shadow-xl shadow-slate-200/40 border border-slate-100">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Calculator size={20} className="text-blue-500" /> Monthly Salary Calculation
+              <Calculator size={20} className="text-blue-500" /> Salary Calculation
             </h3>
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-              <select 
-                value={selectedMonth} 
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
-              >
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {format(new Date(2000, i), 'MMM')}
-                  </option>
-                ))}
-              </select>
-              <select 
-                value={selectedYear} 
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
-              >
-                {Array.from({ length: 5 }).map((_, i) => {
-                  const year = new Date().getFullYear() - 2 + i;
-                  return <option key={year} value={year}>{year}</option>;
-                })}
-              </select>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setCalculationMode('month')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${calculationMode === 'month' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  By Month
+                </button>
+                <button
+                  onClick={() => setCalculationMode('period')}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${calculationMode === 'period' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  By Period
+                </button>
+              </div>
+
+              {calculationMode === 'month' ? (
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                  <select 
+                    value={selectedMonth} 
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
+                  >
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {format(new Date(2000, i), 'MMM')}
+                      </option>
+                    ))}
+                  </select>
+                  <select 
+                    value={selectedYear} 
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => {
+                      const year = new Date().getFullYear() - 2 + i;
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
+                  />
+                  <span className="text-slate-400">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 py-1"
+                  />
+                </div>
+              )}
             </div>
           </div>
           
@@ -309,7 +362,7 @@ export default function Dashboard() {
                       <td className="px-4 py-3">
                         <div className="font-medium text-slate-900">{row.full_name}</div>
                         <div className="text-xs text-slate-500">
-                          {format(new Date(selectedYear, selectedMonth - 1), 'MMM yyyy')} • ₹{row.monthly_salary.toLocaleString()} / mo
+                          {calculationMode === 'month' ? format(new Date(selectedYear, selectedMonth - 1), 'MMM yyyy') : row.periodStr} • ₹{row.monthly_salary.toLocaleString()} / mo
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">

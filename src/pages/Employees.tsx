@@ -9,6 +9,7 @@ export default function Employees() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<number | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const [formData, setFormData] = useState({
@@ -49,11 +50,16 @@ export default function Employees() {
     fetchEmployees();
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this employee?')) {
-      await fetch(`/api/employees/${id}`, { method: 'DELETE' });
+  const confirmDelete = async () => {
+    if (employeeToDelete !== null) {
+      await fetch(`/api/employees/${employeeToDelete}`, { method: 'DELETE' });
+      setEmployeeToDelete(null);
       fetchEmployees();
     }
+  };
+
+  const handleDelete = (id: number) => {
+    setEmployeeToDelete(id);
   };
 
   const openModal = (emp?: Employee) => {
@@ -322,6 +328,38 @@ export default function Employees() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {employeeToDelete !== null && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Employee</h3>
+              <p className="text-slate-500 text-sm">
+                Are you sure you want to delete this employee? This action cannot be undone.
+              </p>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                onClick={() => setEmployeeToDelete(null)}
+                className="px-4 py-2 rounded-lg font-medium text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30"
+              >
+                Delete
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
