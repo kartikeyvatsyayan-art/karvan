@@ -17,6 +17,7 @@ import {
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'motion/react';
+import VeewellLogo from './VeewellLogo';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -158,27 +159,37 @@ export default function Layout() {
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         className="bg-slate-900 text-white flex flex-col shadow-xl z-20 relative print:hidden"
       >
-        <div className="p-6 flex items-center justify-between overflow-hidden">
+        <div className={twMerge(
+          "flex items-center overflow-hidden transition-all duration-300",
+          isSidebarCollapsed ? "p-4 flex-col gap-4 justify-center" : "p-6 justify-between"
+        )}>
           <AnimatePresence mode="wait">
-            {!isSidebarCollapsed && (
+            {isSidebarCollapsed ? (
               <motion.div
-                key="logo"
+                key="logo-collapsed"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center justify-center"
+              >
+                <VeewellLogo collapsed={true} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="logo-expanded"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="whitespace-nowrap"
               >
-                <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                  Veewell Admin
-                </h1>
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-medium">Enterprise Portal</p>
+                <VeewellLogo collapsed={false} />
               </motion.div>
             )}
           </AnimatePresence>
           
           <button 
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white premium-glossy"
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white premium-glossy shrink-0"
           >
             {isSidebarCollapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
           </button>
@@ -284,7 +295,43 @@ export default function Layout() {
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto relative print:p-0 print:bg-white">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-slate-50/50 pointer-events-none" />
-        <div className="relative p-8 max-w-7xl mx-auto">
+        
+        {/* Subtle animated Orthopedic Watermarks on the right background side */}
+        {/* Top Watermark */}
+        <div className="absolute top-[8%] right-0 w-[240px] sm:w-[350px] md:w-[450px] lg:w-[500px] pointer-events-none z-0 overflow-hidden select-none opacity-25 print:hidden">
+          <motion.img
+            initial={{ opacity: 0, x: 60, y: -20, scale: 0.9, rotate: 3 }}
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 }}
+            transition={{ 
+              duration: 2, 
+              ease: [0.16, 1, 0.3, 1], // Custom cubic-bezier for a high-end premium float in
+              delay: 0.4
+            }}
+            src="/src/assets/images/ortho_clinical_watermark_1779705948388.png"
+            alt="Orthopedic Watermark Top"
+            referrerPolicy="no-referrer"
+            className="w-full h-auto object-contain opacity-[0.08] mix-blend-multiply"
+          />
+        </div>
+
+        {/* Bottom Watermark */}
+        <div className="absolute bottom-[8%] right-0 w-[240px] sm:w-[350px] md:w-[450px] lg:w-[500px] pointer-events-none z-0 overflow-hidden select-none opacity-25 print:hidden">
+          <motion.img
+            initial={{ opacity: 0, x: 60, y: 20, scale: 0.9, rotate: -3 }}
+            animate={{ opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 }}
+            transition={{ 
+              duration: 2, 
+              ease: [0.16, 1, 0.3, 1],
+              delay: 0.6
+            }}
+            src="/src/assets/images/ortho_joint_watermark_1779706405412.png"
+            alt="Orthopedic Joint Watermark Bottom"
+            referrerPolicy="no-referrer"
+            className="w-full h-auto object-contain opacity-[0.08] mix-blend-multiply"
+          />
+        </div>
+
+        <div className="relative p-8 max-w-7xl mx-auto z-10">
           <Outlet />
         </div>
       </main>
