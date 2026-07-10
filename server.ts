@@ -36,6 +36,63 @@ async function startServer() {
     });
   });
 
+  // Attendance Summary for specific date
+  app.get('/api/attendance-summary', (req, res) => {
+    let { date } = req.query; // Expecting YYYY-MM-DD
+    
+    if (!date) {
+      // Find the latest date recorded in attendance table
+      const latestRecord = db.prepare('SELECT date FROM attendance ORDER BY date DESC LIMIT 1').get() as { date: string } | undefined;
+      if (latestRecord) {
+        date = latestRecord.date;
+      } else {
+        // Fallback to current date in YYYY-MM-DD
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        date = `${year}-${month}-${day}`;
+      }
+    }
+
+    const totalEmployeesResult = db.prepare('SELECT COUNT(*) as count FROM employees').get() as { count: number };
+    const totalEmployees = totalEmployeesResult.count;
+
+    const records = db.prepare('SELECT status, COUNT(*) as count FROM attendance WHERE date = ? GROUP BY status').all(date) as { status: string; count: number }[];
+
+    const summary = {
+      date,
+      present: 0,
+      absent: 0,
+      leave: 0,
+      halfDay: 0,
+      sunday: 0,
+      unmarked: totalEmployees,
+      totalEmployees
+    };
+
+    let totalMarked = 0;
+    records.forEach(row => {
+      const count = row.count;
+      if (row.status === 'P') {
+        summary.present = count;
+      } else if (row.status === 'A') {
+        summary.absent = count;
+      } else if (row.status === 'L') {
+        summary.leave = count;
+      } else if (row.status === 'H') {
+        summary.halfDay = count;
+      } else if (row.status === 'S') {
+        summary.sunday = count;
+      }
+      totalMarked += count;
+    });
+
+    summary.unmarked = Math.max(0, totalEmployees - totalMarked);
+
+    res.json(summary);
+  });
+
   // Employees
   app.get('/api/employees', (req, res) => {
     const employees = db.prepare('SELECT * FROM employees ORDER BY id DESC').all();

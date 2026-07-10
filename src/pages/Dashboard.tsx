@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Users, IndianRupee, Wallet, Clock, CreditCard, Calculator, FileDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
+import AttendanceSummaryCard from '../components/AttendanceSummaryCard';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -154,17 +155,7 @@ export default function Dashboard() {
     doc.setTextColor(5, 150, 105); // emerald-600
     doc.text(`Rs. ${emp.finalSalary.toLocaleString()}`, 190, 185, { align: 'right' });
 
-    // Paid Amount & Balance
-    doc.setFontSize(12);
-    doc.setTextColor(15, 23, 42); // slate-900
-    doc.text('Amount Already Paid:', 120, 195);
-    doc.text(`Rs. ${emp.totalPaidAmount.toLocaleString()}`, 190, 195, { align: 'right' });
 
-    const balanceDue = emp.finalSalary - emp.totalPaidAmount;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Balance Due:', 120, 205);
-    doc.setTextColor(balanceDue > 0 ? 220 : 5, balanceDue > 0 ? 38 : 150, balanceDue > 0 ? 38 : 105); // red if due, green if 0
-    doc.text(`Rs. ${balanceDue.toLocaleString()}`, 190, 205, { align: 'right' });
     
     // Footer
     doc.setTextColor(15, 23, 42);
@@ -411,6 +402,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Daily Attendance Summary Card using Recharts */}
+      <AttendanceSummaryCard />
     </motion.div>
   );
 }
