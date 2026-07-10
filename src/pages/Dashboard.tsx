@@ -403,7 +403,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Daily Attendance Summary Card using Recharts */}
+      {/* Employee-wise Monthly Attendance Visualizer */}
       <AttendanceSummaryCard />
     </motion.div>
   );

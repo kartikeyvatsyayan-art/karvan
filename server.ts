@@ -93,6 +93,117 @@ async function startServer() {
     res.json(summary);
   });
 
+  // Monthly Attendance Summary
+  app.get('/api/attendance-monthly-summary', (req, res) => {
+    let { month } = req.query; // Expecting YYYY-MM
+    
+    if (!month) {
+      // Find the latest month recorded in attendance table
+      const latestRecord = db.prepare('SELECT date FROM attendance ORDER BY date DESC LIMIT 1').get() as { date: string } | undefined;
+      if (latestRecord) {
+        month = latestRecord.date.substring(0, 7);
+      } else {
+        // Fallback to current month in YYYY-MM
+        const d = new Date();
+        const year = d.getFullYear();
+        const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+        month = `${year}-${monthStr}`;
+      }
+    }
+
+    const [yearStr, monthStr] = (month as string).split('-');
+    const year = parseInt(yearStr);
+    const monthNum = parseInt(monthStr);
+    const daysInMonth = new Date(year, monthNum, 0).getDate();
+
+    const totalEmployeesResult = db.prepare('SELECT COUNT(*) as count FROM employees').get() as { count: number };
+    const totalEmployees = totalEmployeesResult.count;
+
+    const records = db.prepare("SELECT status, COUNT(*) as count FROM attendance WHERE date LIKE ? GROUP BY status").all(`${month}-%`) as { status: string; count: number }[];
+
+    const summary = {
+      month,
+      present: 0,
+      absent: 0,
+      leave: 0,
+      halfDay: 0,
+      sunday: 0,
+      unmarked: totalEmployees * daysInMonth,
+      totalEmployees,
+      daysInMonth,
+      totalPotentialRecords: totalEmployees * daysInMonth,
+      employeeSummary: [] as any[]
+    };
+
+    let totalMarked = 0;
+    records.forEach(row => {
+      const count = row.count;
+      if (row.status === 'P') {
+        summary.present = count;
+      } else if (row.status === 'A') {
+        summary.absent = count;
+      } else if (row.status === 'L') {
+        summary.leave = count;
+      } else if (row.status === 'H') {
+        summary.halfDay = count;
+      } else if (row.status === 'S') {
+        summary.sunday = count;
+      }
+      totalMarked += count;
+    });
+
+    summary.unmarked = Math.max(0, (totalEmployees * daysInMonth) - totalMarked);
+
+    // Get individual employee summaries for the month
+    const employeesList = db.prepare('SELECT id, full_name, mobile, monthly_salary FROM employees ORDER BY full_name ASC').all() as { id: number; full_name: string; mobile: string; monthly_salary: number }[];
+    
+    const employeeRecords = db.prepare(`
+      SELECT employee_id, status, COUNT(*) as count 
+      FROM attendance 
+      WHERE date LIKE ? 
+      GROUP BY employee_id, status
+    `).all(`${month}-%`) as { employee_id: number; status: string; count: number }[];
+
+    const empRecordMap: Record<number, Record<string, number>> = {};
+    employeeRecords.forEach(row => {
+      if (!empRecordMap[row.employee_id]) {
+        empRecordMap[row.employee_id] = { P: 0, A: 0, L: 0, H: 0, S: 0 };
+      }
+      empRecordMap[row.employee_id][row.status] = row.count;
+    });
+
+    summary.employeeSummary = employeesList.map(emp => {
+      const stats = empRecordMap[emp.id] || { P: 0, A: 0, L: 0, H: 0, S: 0 };
+      const present = stats.P || 0;
+      const absent = stats.A || 0;
+      const leave = stats.L || 0;
+      const halfDay = stats.H || 0;
+      const sunday = stats.S || 0;
+      const totalMarkedForEmp = present + absent + leave + halfDay + sunday;
+      const unmarked = Math.max(0, daysInMonth - totalMarkedForEmp);
+      const totalRelevantMarked = present + absent + leave + halfDay;
+      const attendanceRate = totalRelevantMarked > 0
+        ? Math.round(((present + halfDay * 0.5) / totalRelevantMarked) * 100)
+        : 0;
+
+      return {
+        id: emp.id,
+        fullName: emp.full_name,
+        mobile: emp.mobile,
+        monthlySalary: emp.monthly_salary,
+        present,
+        absent,
+        leave,
+        halfDay,
+        sunday,
+        unmarked,
+        attendanceRate
+      };
+    });
+
+    res.json(summary);
+  });
+
   // Employees
   app.get('/api/employees', (req, res) => {
     const employees = db.prepare('SELECT * FROM employees ORDER BY id DESC').all();
