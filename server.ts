@@ -14,6 +14,30 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Ensure uploads directory exists and is served statically
+  const uploadsDir = path.resolve(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use('/uploads', express.static(uploadsDir));
+
+  // File Upload API
+  app.post('/api/upload', upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = req.file.originalname ? path.extname(req.file.originalname) : '.png';
+      const filename = uniqueSuffix + ext;
+      const filePath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filePath, req.file.buffer);
+      res.json({ url: `/uploads/${filename}` });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // API Routes
   
   // Dashboard
@@ -155,7 +179,7 @@ async function startServer() {
     summary.unmarked = Math.max(0, (totalEmployees * daysInMonth) - totalMarked);
 
     // Get individual employee summaries for the month
-    const employeesList = db.prepare('SELECT id, full_name, mobile, monthly_salary FROM employees ORDER BY full_name ASC').all() as { id: number; full_name: string; mobile: string; monthly_salary: number }[];
+    const employeesList = db.prepare('SELECT id, full_name, mobile, photo_url, monthly_salary FROM employees ORDER BY full_name ASC').all() as { id: number; full_name: string; mobile: string; photo_url: string; monthly_salary: number }[];
     
     const employeeRecords = db.prepare(`
       SELECT employee_id, status, COUNT(*) as count 
@@ -190,6 +214,7 @@ async function startServer() {
         id: emp.id,
         fullName: emp.full_name,
         mobile: emp.mobile,
+        photoUrl: emp.photo_url,
         monthlySalary: emp.monthly_salary,
         present,
         absent,
@@ -211,13 +236,13 @@ async function startServer() {
   });
 
   app.post('/api/employees', (req, res) => {
-    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining } = req.body;
+    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, pan_photo_url, aadhaar_photo_url, monthly_salary, date_of_joining } = req.body;
     try {
       const stmt = db.prepare(`
-        INSERT INTO employees (full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO employees (full_name, mobile, address, pan_id, aadhaar_id, photo_url, pan_photo_url, aadhaar_photo_url, monthly_salary, date_of_joining)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
-      const info = stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining);
+      const info = stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, pan_photo_url, aadhaar_photo_url, monthly_salary, date_of_joining);
       res.json({ id: info.lastInsertRowid });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -225,14 +250,14 @@ async function startServer() {
   });
 
   app.put('/api/employees/:id', (req, res) => {
-    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining } = req.body;
+    const { full_name, mobile, address, pan_id, aadhaar_id, photo_url, pan_photo_url, aadhaar_photo_url, monthly_salary, date_of_joining } = req.body;
     try {
       const stmt = db.prepare(`
         UPDATE employees 
-        SET full_name = ?, mobile = ?, address = ?, pan_id = ?, aadhaar_id = ?, photo_url = ?, monthly_salary = ?, date_of_joining = ?
+        SET full_name = ?, mobile = ?, address = ?, pan_id = ?, aadhaar_id = ?, photo_url = ?, pan_photo_url = ?, aadhaar_photo_url = ?, monthly_salary = ?, date_of_joining = ?
         WHERE id = ?
       `);
-      stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, monthly_salary, date_of_joining, req.params.id);
+      stmt.run(full_name, mobile, address, pan_id, aadhaar_id, photo_url, pan_photo_url, aadhaar_photo_url, monthly_salary, date_of_joining, req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });

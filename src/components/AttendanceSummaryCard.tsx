@@ -8,6 +8,7 @@ interface EmployeeSummary {
   id: number;
   fullName: string;
   mobile: string;
+  photoUrl?: string;
   monthlySalary: number;
   present: number;
   absent: number;
@@ -374,9 +375,17 @@ export default function AttendanceSummaryCard() {
                           <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                                  {initials}
-                                </div>
+                                {emp.photoUrl ? (
+                                  <img
+                                    src={emp.photoUrl}
+                                    alt={emp.fullName}
+                                    className="w-9 h-9 rounded-full object-cover border border-indigo-100 shadow-sm"
+                                  />
+                                ) : (
+                                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                                    {initials}
+                                  </div>
+                                )}
                                 <div>
                                   <div className="font-bold text-slate-800">{emp.fullName}</div>
                                   <div className="text-[11px] text-slate-400 font-medium flex items-center gap-2 mt-0.5">

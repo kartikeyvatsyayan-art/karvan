@@ -14,6 +14,8 @@ db.exec(`
     pan_id TEXT,
     aadhaar_id TEXT,
     photo_url TEXT,
+    pan_photo_url TEXT,
+    aadhaar_photo_url TEXT,
     monthly_salary REAL NOT NULL,
     date_of_joining TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -62,6 +64,18 @@ db.exec(`
 try {
   const currentYearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
   db.exec(`ALTER TABLE employees ADD COLUMN date_of_joining TEXT DEFAULT '${currentYearStart}'`);
+} catch (error) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE employees ADD COLUMN pan_photo_url TEXT`);
+} catch (error) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE employees ADD COLUMN aadhaar_photo_url TEXT`);
 } catch (error) {
   // Column already exists, ignore
 }

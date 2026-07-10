@@ -6,6 +6,8 @@ export interface Employee {
   pan_id: string;
   aadhaar_id: string;
   photo_url: string;
+  pan_photo_url?: string;
+  aadhaar_photo_url?: string;
   monthly_salary: number;
   date_of_joining: string;
   created_at: string;
