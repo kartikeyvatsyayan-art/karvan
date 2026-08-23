@@ -29,6 +29,7 @@ export interface Advance {
   date: string;
   amount: number;
   full_name?: string;
+  photo_url?: string;
 }
 
 export interface Overtime {

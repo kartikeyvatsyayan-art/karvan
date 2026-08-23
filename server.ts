@@ -313,13 +313,45 @@ async function startServer() {
 
   // Advances
   app.get('/api/advances', (req, res) => {
-    const advances = db.prepare(`
-      SELECT a.*, e.full_name 
+    const { month, year, startDate, endDate, employeeId } = req.query;
+    let query = `
+      SELECT a.*, e.full_name, e.photo_url 
       FROM advances a 
       JOIN employees e ON a.employee_id = e.id 
-      ORDER BY a.date DESC
-    `).all();
-    res.json(advances);
+    `;
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      conditions.push('a.date >= ? AND a.date <= ?');
+      params.push(startDate, endDate);
+    } else if (month && year) {
+      const m = parseInt(month as string, 10);
+      const y = parseInt(year as string, 10);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      const startStr = `${y}-${m.toString().padStart(2, '0')}-01`;
+      const endStr = `${y}-${m.toString().padStart(2, '0')}-${daysInMonth.toString().padStart(2, '0')}`;
+      conditions.push('a.date >= ? AND a.date <= ?');
+      params.push(startStr, endStr);
+    }
+
+    if (employeeId && employeeId !== 'all') {
+      conditions.push('a.employee_id = ?');
+      params.push(employeeId);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY a.date DESC';
+
+    try {
+      const advances = db.prepare(query).all(...params);
+      res.json(advances);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
   });
 
   app.post('/api/advances', (req, res) => {
